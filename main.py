@@ -67,7 +67,7 @@ def registrar_rosto():
     webcam = cv2.VideoCapture(0)
     print("Capturando rosto. Pressione 's' para salvar e sair.")
     i = 0
-    while i < 10:
+    while i < 15:
         verificacao, frame = webcam.read()
         if not verificacao:
             print("Erro ao acessar a câmera.")
@@ -82,7 +82,7 @@ def registrar_rosto():
             print(f"Rosto de {nome} salvo com sucesso!")
             treinar_modelo()
             i += 1
-            print(i)  # Aqui você imprime o valor de i após o incremento
+            print(i) 
 
         cv2.imshow("Registrar Rosto", frame)
         if cv2.waitKey(7) & 0xFF == ord('s'):
@@ -123,13 +123,12 @@ def reconhecimento_facial():
                 print("Rosto não reconhecido")
         
         cv2.imshow("Reconhecimento Facial", frame)
-        if cv2.waitKey(4) == 27:
+        if cv2.waitKey(5) == 27:
             break
 
     webcam.release()
     cv2.destroyAllWindows()
 
-# Menu principal
 def menu():
     while True:
         print("\nSistema de Reconhecimento Facial")
@@ -149,4 +148,4 @@ def menu():
 
 if __name__ == "__main__":
     menu()
-    conn.close()  # Feche a conexão com o banco de dados ao sair do programa
+    conn.close()  

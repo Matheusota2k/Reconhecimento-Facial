@@ -1,7 +1,3 @@
-"""
-Demo of all widgets
-"""
-
 from main import reconhecimento_facial, registrar_rosto;
 import TKinterModernThemes as TKMT
 from functools import partial
@@ -16,10 +12,10 @@ class App(TKMT.ThemedTKinterFrame):
         # Separator
 
         self.nextCol()
-        self.button_frame = self.addLabelFrame("Buttons")
-        self.button_frame.Button("Button", self.handleButtonClick)
-        self.button_frame.Button("Button", self.handleButtonClick2)
-        self.button_frame.Button("Button", self.handleButtonClick2)
+        self.button_frame = self.addLabelFrame("Painel")
+        self.button_frame.Button("Registrar Rosto", self.handleButtonClick)
+        self.button_frame.Button("Ativar Reconhecimento", self.handleButtonClick2)
+        self.button_frame.Button("Sair", self.handleButtonClick2)
 
         # Menu for the Menubutton
         # Create a Frame for input widgets
@@ -41,22 +37,6 @@ class App(TKMT.ThemedTKinterFrame):
        
     # def handleButtonClick3(self):
     #     fechar()
-
-    def textupdate(self, _var, _indx, _mode):
-        print("Current text status:", self.textinputvar.get())
-
-    def menuprint(self, item):
-        if self == self:
-            pass
-        print("Menu item chosen: ", item)
-
-    def validateText(self, text):
-        if self == self:
-            pass
-        if 'q' not in text:
-            return True
-        print("The letter q is not allowed.")
-        return False
 
 if __name__ == '__main__':
     app = App(("park").lower(),("dark").lower())
