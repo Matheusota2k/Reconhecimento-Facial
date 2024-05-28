@@ -1,13 +1,10 @@
+import os
 import cv2
 import numpy as np
 import sqlite3
-import os
 
-# Conectar ao banco de dados SQLite (ou criar se não existir)
 conn = sqlite3.connect('face_recognition.db')
 cursor = conn.cursor()
-
-# Criar a tabela para armazenar os dados faciais
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS faces (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,23 +13,17 @@ CREATE TABLE IF NOT EXISTS faces (
 )
 ''')
 conn.commit()
-
-# Inicializar o reconhecedor facial e o classificador de cascata
 face_recognizer = cv2.face.LBPHFaceRecognizer_create()
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Criar a pasta faces se não existir
-if not os.path.exists('faces'):
-    os.makedirs('faces')
+# Criar a pasta 'faces' para armazenar as imagens de faces, se não existir
+
+os.makedirs('faces', exist_ok=True)
 
 def carregar_rostos():
     cursor.execute('SELECT name, face_id FROM faces')
     rostos = cursor.fetchall()
-    nomes = []
-    ids = []
-    for rosto in rostos:
-        nomes.append(rosto[0])
-        ids.append(rosto[1])
+    nomes, ids = zip(*rostos) if rostos else ([], [])
     return nomes, ids
 
 def salvar_rosto(nome, face_id):
@@ -40,10 +31,10 @@ def salvar_rosto(nome, face_id):
     conn.commit()
 
 def treinar_modelo():
-    face_samples = []
-    face_ids = []
+    face_samples, face_ids = [], []
     nomes, ids = carregar_rostos()
-    for i, face_id in enumerate(ids):
+    
+    for face_id in ids:
         caminho = f'faces/user.{face_id}.jpg'
         if os.path.exists(caminho):
             imagem = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
@@ -54,20 +45,12 @@ def treinar_modelo():
         face_recognizer.train(face_samples, np.array(face_ids))
         face_recognizer.write('face_trainer.yml')
 
-def registrar_rosto():
-    nome = input("Digite o nome da pessoa: ")
-    if not nome:
-        print("Erro: Nome não pode estar vazio!")
-        return
-    
-    cursor.execute('SELECT MAX(face_id) FROM faces')
-    result = cursor.fetchone()
-    novo_id = 1 if result[0] is None else result[0] + 1
-
+def capturar_rosto(nome, novo_id):
+    # Capturar a imagem da face usando a webcam
     webcam = cv2.VideoCapture(0)
     print("Capturando rosto. Pressione 's' para salvar e sair.")
-    i = 0
-    while i < 15:
+    
+    while True:
         verificacao, frame = webcam.read()
         if not verificacao:
             print("Erro ao acessar a câmera.")
@@ -77,21 +60,34 @@ def registrar_rosto():
         rostos = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         for (x, y, w, h) in rostos:
+            # Salvar a imagem da face detectada e registrar no banco de dados
             cv2.imwrite(f"faces/user.{novo_id}.jpg", gray[y:y+h, x:x+w])
             salvar_rosto(nome, novo_id)
             print(f"Rosto de {nome} salvo com sucesso!")
             treinar_modelo()
-            i += 1
-            print(i) 
+            webcam.release()
+            cv2.destroyAllWindows()
+            return
 
         cv2.imshow("Registrar Rosto", frame)
         if cv2.waitKey(7) & 0xFF == ord('s'):
             break
-
     webcam.release()
     cv2.destroyAllWindows()
 
+def registrar_rosto():
+    nome = input("Digite o nome da pessoa: ").strip()
+    if not nome:
+        print("Erro: Nome não pode estar vazio!")
+        return
+    
+    cursor.execute('SELECT MAX(face_id) FROM faces')
+    result = cursor.fetchone()
+    novo_id = (result[0] or 0) + 1
+    capturar_rosto(nome, novo_id)
+
 def reconhecimento_facial():
+    # Verificar se o modelo de reconhecimento facial foi treinado
     if not os.path.exists('face_trainer.yml'):
         print("Nenhum rosto registrado para reconhecimento.")
         return
@@ -111,6 +107,7 @@ def reconhecimento_facial():
         rostos = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         for (x, y, w, h) in rostos:
+            # Prever a identidade da face detectada
             id, confianca = face_recognizer.predict(gray[y:y+h, x:x+w])
             if confianca < 100:
                 cursor.execute('SELECT name FROM faces WHERE face_id = ?', (id,))
@@ -118,7 +115,7 @@ def reconhecimento_facial():
                 if result:
                     nome = result[0]
                     confianca_txt = f"{round(100 - confianca)}%"
-                    print(f"Nome: {nome}, Confiança: {confianca_txt}")
+                    print(f"Nome: {nome}, Compatibilidade: {confianca_txt}")
             else:
                 print("Rosto não reconhecido")
         
@@ -130,6 +127,7 @@ def reconhecimento_facial():
     cv2.destroyAllWindows()
 
 def menu():
+    # Exibir menu principal
     while True:
         print("\nSistema de Reconhecimento Facial")
         print("1. Registrar Rosto")
@@ -146,6 +144,7 @@ def menu():
         else:
             print("Opção inválida, tente novamente.")
 
+
 if __name__ == "__main__":
     menu()
-    conn.close()  
+    conn.close()
