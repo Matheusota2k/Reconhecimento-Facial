@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import sqlite3
 
+# Conexão com o banco de dados
 conn = sqlite3.connect('face_recognition.db')
 cursor = conn.cursor()
 cursor.execute('''
@@ -12,12 +13,13 @@ CREATE TABLE IF NOT EXISTS faces (
     face_id INTEGER NOT NULL
 )
 ''')
+
 conn.commit()
+
 face_recognizer = cv2.face.LBPHFaceRecognizer_create()
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Criar a pasta 'faces' para armazenar as imagens de faces, se não existir
-
+# Criação da pasta 'faces' para armazenar as imagens de rostos, se não existir
 os.makedirs('faces', exist_ok=True)
 
 def carregar_rostos():
@@ -26,10 +28,11 @@ def carregar_rostos():
     nomes, ids = zip(*rostos) if rostos else ([], [])
     return nomes, ids
 
+# Função para salvar um novo rosto no banco de dados
 def salvar_rosto(nome, face_id):
     cursor.execute('INSERT INTO faces (name, face_id) VALUES (?, ?)', (nome, face_id))
     conn.commit()
-
+    
 def treinar_modelo():
     face_samples, face_ids = [], []
     nomes, ids = carregar_rostos()
@@ -45,8 +48,8 @@ def treinar_modelo():
         face_recognizer.train(face_samples, np.array(face_ids))
         face_recognizer.write('face_trainer.yml')
 
+# Função para capturar um novo rosto e registrá-lo no banco de dados
 def capturar_rosto(nome, novo_id):
-    # Capturar a imagem da face usando a webcam
     webcam = cv2.VideoCapture(0)
     print("Capturando rosto. Pressione 's' para salvar e sair.")
     
@@ -60,7 +63,7 @@ def capturar_rosto(nome, novo_id):
         rostos = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         for (x, y, w, h) in rostos:
-            # Salvar a imagem da face detectada e registrar no banco de dados
+            # Salva a imagem do rosto detectado e registra no banco de dados
             cv2.imwrite(f"faces/user.{novo_id}.jpg", gray[y:y+h, x:x+w])
             salvar_rosto(nome, novo_id)
             print(f"Rosto de {nome} salvo com sucesso!")
@@ -75,6 +78,7 @@ def capturar_rosto(nome, novo_id):
     webcam.release()
     cv2.destroyAllWindows()
 
+# Função para registrar um novo rosto
 def registrar_rosto():
     nome = input("Digite o nome da pessoa: ").strip()
     if not nome:
@@ -86,8 +90,8 @@ def registrar_rosto():
     novo_id = (result[0] or 0) + 1
     capturar_rosto(nome, novo_id)
 
+# Função para o reconhecimento facial em tempo real
 def reconhecimento_facial():
-    # Verificar se o modelo de reconhecimento facial foi treinado
     if not os.path.exists('face_trainer.yml'):
         print("Nenhum rosto registrado para reconhecimento.")
         return
@@ -107,7 +111,6 @@ def reconhecimento_facial():
         rostos = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         for (x, y, w, h) in rostos:
-            # Prever a identidade da face detectada
             id, confianca = face_recognizer.predict(gray[y:y+h, x:x+w])
             if confianca < 100:
                 cursor.execute('SELECT name FROM faces WHERE face_id = ?', (id,))
@@ -126,8 +129,8 @@ def reconhecimento_facial():
     webcam.release()
     cv2.destroyAllWindows()
 
+# Função para exibir o menu principal
 def menu():
-    # Exibir menu principal
     while True:
         print("\nSistema de Reconhecimento Facial")
         print("1. Registrar Rosto")
@@ -143,7 +146,6 @@ def menu():
             break
         else:
             print("Opção inválida, tente novamente.")
-
 
 if __name__ == "__main__":
     menu()
